@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext } from 'react'
 
 import { makeStyles, Theme, createStyles } from '@material-ui/core/styles'
-import Modal from '@material-ui/core/Modal';
+import Modal from '@material-ui/core/Modal'
 
 import axios from 'axios'
 
@@ -18,6 +18,7 @@ import TableRow from '@material-ui/core/TableRow'
 import IconButton from '@material-ui/core/IconButton'
 import ReplayIcon from '@material-ui/icons/Replay'
 import EditIcon from '@material-ui/icons/Edit'
+import DeleteIcon from '@material-ui/icons/Delete'
 
 import Fab from '@material-ui/core/Fab'
 import AddIcon from '@material-ui/icons/Add'
@@ -46,7 +47,7 @@ function getModalStyle() {
 		top: "50%",
 		left: "50%",
 		transform: "translate(-50%, -50%)",
-	};
+	}
 }
 const useStyles = makeStyles((theme: Theme) =>
 	createStyles({
@@ -62,11 +63,12 @@ const useStyles = makeStyles((theme: Theme) =>
 			right: 5,
 		},
 	}),
-);
+)
 
-export const ListContext = createContext([weightInitial]);
-export const TargetContext = createContext(weightInitial);
-
+export const ListContext: any = createContext([[weightInitial], () => { }])
+export const TargetContext = createContext(weightInitial)
+export const AddModalContext: any = createContext([false, () => { }])
+export const EditModalContext: any = createContext([false, () => { }])
 
 const UserList = () => {
 
@@ -75,8 +77,8 @@ const UserList = () => {
 	const [modalStyle] = useState(getModalStyle)
 	const [weights, setWeights] = useState([weightInitial])
 	const [targetWeight, setTargetWeight] = useState(weightInitial)
-	const [openAdd, setOpenAdd] = useState(false)
-	const [openEdit, setOpenEdit] = useState(false)
+	const [addModal, setAddModal] = useState(false)
+	const [editModal, setEditModal] = useState(false)
 
 	const ROOT_URL = "http://localhost:8080"
 
@@ -88,45 +90,61 @@ const UserList = () => {
 		setWeights(res.data)
 	}
 
-	const handleAddOpen = () => {
-		setOpenAdd(true)
+	const handleAddModalOpen = () => {
+		setAddModal(true)
 	}
-	const handleAddClose = () => {
-		setOpenAdd(false)
+	const handleAddModalClose = () => {
+		setAddModal(false)
 	}
-	const handleEditOpen = (e: any) => {
+	const handleEditModalOpen = (e: any) => {
 		let targetId = e.currentTarget.getAttribute('data-num')
 		let targetWeightArray = weights.filter(item => {
 			if (item.id == targetId) return true;
 		});
 		setTargetWeight(targetWeightArray[0])
-		setOpenEdit(true)
+		setEditModal(true)
 	}
-	const handleEditClose = () => {
-		setOpenEdit(false)
+	const handleEditModalClose = () => {
+		setEditModal(false)
 	}
+	const handleDelete = async (e: any) => {
+		e.preventDefault();
+		let targetId = e.currentTarget.getAttribute('data-num')
+		const ROOT_URL = "http://localhost:8080";
+
+		await axios.delete(`${ROOT_URL}/api/weight/${targetId}`, {
+			headers: authHeader()
+		})
+		await fetchData()
+	}
+
 	const handleReload = () => {
 		fetchData()
 	}
 
 	useEffect(() => {
 		fetchData()
-		console.log('useEffect')
 	}, [])
 
-	const modalAddBody = (
+	const addModalBody = (
 		<div style={modalStyle} className={classes.paper}>
-			<ListContext.Provider value={weights}>
-				<AddWeight />
+			<ListContext.Provider value={[weights, setWeights]}>
+				<AddModalContext.Provider value={[addModal, setAddModal]}>
+					<AddWeight />
+				</AddModalContext.Provider>
 			</ListContext.Provider>
 		</div>
 	);
 
-	const modalEditBody = (
+	const editModalBody = (
 		<div style={modalStyle} className={classes.paper}>
-			<TargetContext.Provider value={targetWeight}>
-				<EditWeight />
-			</TargetContext.Provider>
+			<ListContext.Provider value={[weights, setWeights]}>
+				<TargetContext.Provider value={targetWeight}>
+					<EditModalContext.Provider value={[editModal, setEditModal]}>
+						<EditWeight />
+					</EditModalContext.Provider>
+				</TargetContext.Provider>
+			</ListContext.Provider>
 		</div>
 	);
 
@@ -155,8 +173,11 @@ const UserList = () => {
 								<TableCell align='center'>{weight.bodyFat}<small>%</small></TableCell>
 								<TableCell align='center'>{weight.subcutaneousFat}<small>%</small></TableCell>
 								<TableCell align='center'>
-									<IconButton aria-label="edit" onClick={handleEditOpen} data-num={weight.id}>
+									<IconButton aria-label="edit" onClick={handleEditModalOpen} data-num={weight.id}>
 										<EditIcon />
+									</IconButton>
+									<IconButton aria-label="edit" onClick={handleDelete} data-num={weight.id}>
+										<DeleteIcon />
 									</IconButton>
 								</TableCell>
 							</TableRow>
@@ -164,20 +185,20 @@ const UserList = () => {
 					</TableBody>
 				</Table>
 			</TableContainer>
-			<Fab color="primary" aria-label="add" onClick={handleAddOpen} className={classes.fab}>
+			<Fab color="primary" aria-label="add" onClick={handleAddModalOpen} className={classes.fab}>
 				<AddIcon fontSize="large" />
 			</Fab>
 			<Modal
-				open={openAdd}
-				onClose={handleAddClose}
+				open={addModal}
+				onClose={handleAddModalClose}
 			>
-				{modalAddBody}
+				{addModalBody}
 			</Modal>
 			<Modal
-				open={openEdit}
-				onClose={handleEditClose}
+				open={editModal}
+				onClose={handleEditModalClose}
 			>
-				{modalEditBody}
+				{editModalBody}
 			</Modal>
 		</React.Fragment>
 	)

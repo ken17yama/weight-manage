@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { TargetContext } from './WeightList';
+import { ListContext, TargetContext, EditModalContext } from './WeightList';
 
 import axios from 'axios'
 import moment from 'moment'
@@ -22,9 +22,7 @@ import {
 	KeyboardDatePicker,
 } from '@material-ui/pickers';
 
-
 import authHeader from '../services/auth-header';
-
 
 const useStyles = makeStyles((theme: Theme) =>
 	createStyles({
@@ -53,7 +51,9 @@ interface Results {
 
 const EditWeight = () => {
 
+	const [weights, setWeights] = useContext(ListContext);
 	const targetContext = useContext(TargetContext);
+	const [editModal, setEditModal] = useContext(EditModalContext);
 
 	const [weight, setWeight] = useState(0);
 	const [bodyFat, setBodyFat] = useState(0);
@@ -66,7 +66,17 @@ const EditWeight = () => {
 		setSelectedDate(date);
 	};
 
-	const editWeight = (e: React.FormEvent<HTMLButtonElement>) => {
+	const ROOT_URL = "http://localhost:8080"
+
+	const fetchData = async () => {
+		const res = await axios.get(`${ROOT_URL}/api/weight`, { headers: authHeader() })
+		res.data.forEach((item: any, index: number) => {
+			res.data[index].recordDate = item.recordDate.substring(0, item.recordDate.indexOf("T"))
+		})
+		setWeights(res.data)
+	}
+
+	const editWeight = async (e: React.FormEvent<HTMLButtonElement>) => {
 		e.preventDefault();
 		const data: Results = {
 			weight: weight,
@@ -74,13 +84,11 @@ const EditWeight = () => {
 			subcutaneousFat: subcutaneousFat,
 			recordDate: moment(selectedDate).format('YYYY-MM-DD')
 		}
-
-		const ROOT_URL = "http://localhost:8080";
-
-		axios.post(`${ROOT_URL}/api/weight/${targetContext.id}`, data, {
+		await axios.put(`${ROOT_URL}/api/weight/${targetContext.id}`, data, {
 			headers: authHeader()
 		})
-
+		await setEditModal(false)
+		await fetchData()
 	}
 
 	useEffect(() => {

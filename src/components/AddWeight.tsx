@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { ListContext } from './WeightList';
+import { ListContext, AddModalContext } from './WeightList';
 
 import axios from 'axios'
 import moment from 'moment'
@@ -53,7 +53,8 @@ interface Results {
 
 const AddWeight = () => {
 
-	const listContext = useContext(ListContext);
+	const [weights, setWeights] = useContext(ListContext);
+	const [addModal, setAddModal] = useContext(AddModalContext);
 
 	const [weight, setWeight] = useState(0);
 	const [bodyFat, setBodyFat] = useState(0);
@@ -66,7 +67,17 @@ const AddWeight = () => {
 		setSelectedDate(date);
 	};
 
-	const addWeight = (e: React.FormEvent<HTMLButtonElement>) => {
+	const ROOT_URL = "http://localhost:8080"
+
+	const fetchData = async () => {
+		const res = await axios.get(`${ROOT_URL}/api/weight`, { headers: authHeader() })
+		res.data.forEach((item: any, index: number) => {
+			res.data[index].recordDate = item.recordDate.substring(0, item.recordDate.indexOf("T"))
+		})
+		setWeights(res.data)
+	}
+
+	const addWeight = async (e: React.FormEvent<HTMLButtonElement>) => {
 		e.preventDefault();
 		const data: Results = {
 			weight: weight,
@@ -75,9 +86,7 @@ const AddWeight = () => {
 			recordDate: moment(selectedDate).format('YYYY-MM-DD')
 		}
 
-		const ROOT_URL = "http://localhost:8080";
-
-		const result = listContext.filter(item => {
+		const result = weights.filter((item: any) => {
 			if (item.recordDate === data.recordDate) {
 				return true;
 			}
@@ -85,23 +94,22 @@ const AddWeight = () => {
 				return false
 			}
 		})
-
 		if (result.length) {
 			console.log('既に記録しています')
 		} else {
-			// axios.post(`${ROOT_URL}/api/weight`, data)
-			axios.post(`${ROOT_URL}/api/weight`, data, {
+			await axios.post(`${ROOT_URL}/api/weight`, data, {
 				headers: authHeader()
 			})
+			await setAddModal(false)
+			await fetchData()
 		}
-
 	}
 
 	useEffect(() => {
-		setWeight(listContext.slice(-1)[0].weight)
-		setBodyFat(listContext.slice(-1)[0].bodyFat)
-		setSubcutaneousFat(listContext.slice(-1)[0].subcutaneousFat)
-	}, [listContext]);
+		setWeight(weights.slice(-1)[0].weight)
+		setBodyFat(weights.slice(-1)[0].bodyFat)
+		setSubcutaneousFat(weights.slice(-1)[0].subcutaneousFat)
+	}, [weights]);
 
 	const classes = useStyles();
 
