@@ -122,6 +122,7 @@ const AddWeight = () => {
 							<Grid container justify="space-around">
 								<KeyboardDatePicker
 									disableToolbar
+									autoOk
 									variant="inline"
 									format="yyyy/MM/dd"
 									margin="normal"
